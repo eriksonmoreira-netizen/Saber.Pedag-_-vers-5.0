@@ -25,7 +25,7 @@ import {
   Pencil
 } from 'lucide-react';
 import { store } from '../state/store';
-import { SchoolClass, Student, StudentStatus, GradeCriterion, Grade } from '../types';
+import { SchoolClass, Student, StudentStatus, GradeCriterion, Grade, Attendance } from '../types';
 
 interface ClassesProps {
   onSelectStudent?: (id: string) => void;
@@ -33,10 +33,12 @@ interface ClassesProps {
 
 export const Classes: React.FC<ClassesProps> = ({ onSelectStudent }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [classes, setClasses] = useState(store.classes);
-  const [students, setStudents] = useState(store.students);
-  const [grades, setGrades] = useState(store.grades);
-  const [attendances, setAttendances] = useState(store.attendances);
+  
+  // Tipagem explícita para evitar inferência 'never[]'
+  const [classes, setClasses] = useState<SchoolClass[]>(store.classes);
+  const [students, setStudents] = useState<Student[]>(store.students);
+  const [grades, setGrades] = useState<Grade[]>(store.grades);
+  const [attendances, setAttendances] = useState<Attendance[]>(store.attendances);
   
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -69,7 +71,9 @@ export const Classes: React.FC<ClassesProps> = ({ onSelectStudent }) => {
     return students.filter(s => s.class_id === classId).length;
   };
 
-  const calculateStudentStats = (studentId: string) => {
+  const calculateStudentStats = (studentId: string | undefined) => {
+    if (!studentId) return { avgGrade: 0, attendanceRate: 0, studentGrades: [] };
+
     const studentGrades = grades.filter(g => g.student_id === studentId);
     const avgGrade = studentGrades.length > 0 
       ? studentGrades.reduce((acc, g) => acc + g.score, 0) / studentGrades.length 
@@ -96,14 +100,14 @@ export const Classes: React.FC<ClassesProps> = ({ onSelectStudent }) => {
     }
 
     let bestScore = -1;
-    // Tipagem explícita para evitar inferência como 'never' ou 'null' puro
     let bestSpotlight: Student | null = null;
 
     let bestImprValue = -100;
-    // Tipagem explícita
     let bestImprStudent: Student | null = null;
 
     classStudents.forEach(s => {
+      if (!s || !s.id) return; // Segurança extra
+
       // Recalcula stats localmente para evitar problemas de dependência
       const sGrades = grades.filter(g => g.student_id === s.id);
       const avg = sGrades.length > 0 ? sGrades.reduce((a, b) => a + b.score, 0) / sGrades.length : 0;
@@ -134,22 +138,26 @@ export const Classes: React.FC<ClassesProps> = ({ onSelectStudent }) => {
     // Construção segura dos objetos de retorno com Type Guard e Narrowing
     let spotlightData = null;
     if (bestSpotlight) {
-        // 's' agora é garantido como Student (não nulo) pelo TypeScript
         const s = bestSpotlight; 
-        spotlightData = { 
-            student: s, 
-            stats: calculateStudentStats(s.id) 
-        };
+        // Verificação explícita de 's' e 's.id' antes de usar
+        if (s && s.id) {
+            spotlightData = { 
+                student: s, 
+                stats: calculateStudentStats(s.id) 
+            };
+        }
     }
 
     let improvementData = null;
     if (bestImprStudent && bestImprValue > 0) {
-        // 's' agora é garantido como Student (não nulo) pelo TypeScript
         const s = bestImprStudent;
-        improvementData = { 
-            student: s, 
-            value: bestImprValue 
-        };
+        // Verificação explícita
+        if (s && s.id) {
+            improvementData = { 
+                student: s, 
+                value: bestImprValue 
+            };
+        }
     }
 
     return { 
@@ -255,7 +263,7 @@ export const Classes: React.FC<ClassesProps> = ({ onSelectStudent }) => {
 
         {/* Cards de Destaque e Superação */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {specialStudents.spotlight && (
+          {specialStudents.spotlight && specialStudents.spotlight.student && (
             <div 
               onClick={() => onSelectStudent?.(specialStudents.spotlight!.student.id)}
               className="bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200 p-6 rounded-[2rem] shadow-sm flex items-center gap-6 cursor-pointer hover:shadow-md transition-all group"
@@ -274,7 +282,7 @@ export const Classes: React.FC<ClassesProps> = ({ onSelectStudent }) => {
             </div>
           )}
 
-          {specialStudents.improvement && (
+          {specialStudents.improvement && specialStudents.improvement.student && (
             <div 
               onClick={() => onSelectStudent?.(specialStudents.improvement!.student.id)}
               className="bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200 p-6 rounded-[2rem] shadow-sm flex items-center gap-6 cursor-pointer hover:shadow-md transition-all group"
