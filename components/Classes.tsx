@@ -131,20 +131,23 @@ export const Classes: React.FC<ClassesProps> = ({ onSelectStudent }) => {
       }
     });
 
-    // Construção segura dos objetos de retorno com verificação explícita
+    // Construção segura dos objetos de retorno com Type Guard e Narrowing
     let spotlightData = null;
     if (bestSpotlight) {
-        // Garantia de que id existe antes de passar para a função
+        // 's' agora é garantido como Student (não nulo) pelo TypeScript
+        const s = bestSpotlight; 
         spotlightData = { 
-            student: bestSpotlight, 
-            stats: calculateStudentStats(bestSpotlight.id) 
+            student: s, 
+            stats: calculateStudentStats(s.id) 
         };
     }
 
     let improvementData = null;
     if (bestImprStudent && bestImprValue > 0) {
+        // 's' agora é garantido como Student (não nulo) pelo TypeScript
+        const s = bestImprStudent;
         improvementData = { 
-            student: bestImprStudent, 
+            student: s, 
             value: bestImprValue 
         };
     }
