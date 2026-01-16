@@ -13,14 +13,23 @@ const PORT = process.env.PORT || 3000;
 const ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || '';
 
 const app = express();
-const prisma = new PrismaClient();
+
+// Inicialização do Prisma com Log para Debug na Hostinger
+const prisma = new PrismaClient({
+  log: ['query', 'info', 'warn', 'error'],
+});
+
+// Teste de conexão ao iniciar
+prisma.$connect()
+  .then(() => console.log('✅ Conectado ao MySQL (Hostinger) com sucesso.'))
+  .catch((e: any) => console.error('❌ Erro ao conectar ao banco de dados:', e));
 
 // Configuração Mercado Pago
 const client = new MercadoPagoConfig({ accessToken: ACCESS_TOKEN });
 
 // Middlewares
 app.use(cors() as any);
-app.use(express.json());
+app.use(express.json() as any);
 
 // --- ROTAS DA API ---
 
