@@ -195,6 +195,21 @@ class DataStore {
     }
   }
 
+  addClass(newClass: SchoolClass) {
+    this.classes = [...this.classes, newClass];
+    this.notify();
+  }
+
+  updateClass(updatedClass: SchoolClass) {
+    this.classes = this.classes.map(c => c.id === updatedClass.id ? updatedClass : c);
+    this.notify();
+  }
+
+  deleteClass(classId: string) {
+    this.classes = this.classes.filter(c => c.id !== classId);
+    this.notify();
+  }
+
   updateStudent(studentId: string, updates: Partial<Student>) {
     this.students = this.students.map(s => s.id === studentId ? { ...s, ...updates } : s);
     this.notify();

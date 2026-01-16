@@ -21,7 +21,8 @@ import {
   Trophy,
   Zap,
   TrendingUp,
-  Star
+  Star,
+  Pencil
 } from 'lucide-react';
 import { store } from '../state/store';
 import { SchoolClass, Student, StudentStatus, GradeCriterion, Grade } from '../types';
@@ -88,7 +89,11 @@ export const Classes: React.FC<ClassesProps> = ({ onSelectStudent }) => {
     if (!selectedClassId) return { spotlight: null, improvement: null };
     
     const classStudents = students.filter(s => s.class_id === selectedClassId);
-    if (classStudents.length === 0) return { spotlight: null, improvement: null };
+    
+    // Type Guard: Se não houver alunos, retorna nulo imediatamente
+    if (!classStudents || classStudents.length === 0) {
+      return { spotlight: null, improvement: null };
+    }
 
     let bestScore = -1;
     let bestSpotlight: Student | null = null;
@@ -97,17 +102,23 @@ export const Classes: React.FC<ClassesProps> = ({ onSelectStudent }) => {
     let bestImprStudent: Student | null = null;
 
     classStudents.forEach(s => {
-      const stats = calculateStudentStats(s.id);
+      // Recalcula stats localmente para evitar problemas de dependência
+      // Utiliza os dados do escopo do componente (grades, attendances)
+      const sGrades = grades.filter(g => g.student_id === s.id);
+      const avg = sGrades.length > 0 ? sGrades.reduce((a, b) => a + b.score, 0) / sGrades.length : 0;
       
+      const sAtts = attendances.filter(a => a.student_id === s.id);
+      const attRate = sAtts.length > 0 ? sAtts.filter(a => a.status === 'presente').length / sAtts.length : 1;
+
       // Lógica Destaque: Média + Frequência
-      const spotlightScore = (stats.avgGrade * 10) + stats.attendanceRate;
+      const spotlightScore = (avg * 10) + (attRate * 100);
       if (spotlightScore > bestScore) {
         bestScore = spotlightScore;
         bestSpotlight = s;
       }
 
       // Lógica Superação: Comparação entre bimestres
-      const sortedGrades = [...stats.studentGrades].sort((a, b) => a.bimester - b.bimester);
+      const sortedGrades = [...sGrades].sort((a, b) => a.bimester - b.bimester);
       if (sortedGrades.length >= 2) {
         const last = sortedGrades[sortedGrades.length - 1].score;
         const prev = sortedGrades[sortedGrades.length - 2].score;
@@ -119,9 +130,18 @@ export const Classes: React.FC<ClassesProps> = ({ onSelectStudent }) => {
       }
     });
 
+    // Construção segura dos objetos de retorno
+    const spotlightData = (bestSpotlight && bestSpotlight.id)
+      ? { student: bestSpotlight, stats: calculateStudentStats(bestSpotlight.id) }
+      : null;
+
+    const improvementData = (bestImprStudent && bestImprStudent.id && bestImprValue > 0)
+      ? { student: bestImprStudent, value: bestImprValue }
+      : null;
+
     return { 
-      spotlight: bestSpotlight ? { student: bestSpotlight, stats: calculateStudentStats(bestSpotlight.id) } : null,
-      improvement: (bestImprStudent && bestImprValue > 0) ? { student: bestImprStudent, value: bestImprValue } : null
+      spotlight: spotlightData,
+      improvement: improvementData
     };
   }, [selectedClassId, students, grades, attendances]);
 
@@ -144,15 +164,7 @@ export const Classes: React.FC<ClassesProps> = ({ onSelectStudent }) => {
       created_by: store.user?.email
     };
 
-    store.setAllData({
-      ...store,
-      classes: [...store.classes, newClass],
-      students: store.students,
-      grades: store.grades,
-      occurrences: store.occurrences,
-      tutorings: store.tutorings,
-      attendances: store.attendances
-    });
+    store.addClass(newClass);
 
     setIsDialogOpen(false);
     resetForm();
