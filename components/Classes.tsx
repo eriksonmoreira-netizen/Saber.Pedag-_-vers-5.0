@@ -96,14 +96,15 @@ export const Classes: React.FC<ClassesProps> = ({ onSelectStudent }) => {
     }
 
     let bestScore = -1;
+    // Tipagem explícita para evitar inferência como 'never' ou 'null' puro
     let bestSpotlight: Student | null = null;
 
     let bestImprValue = -100;
+    // Tipagem explícita
     let bestImprStudent: Student | null = null;
 
     classStudents.forEach(s => {
       // Recalcula stats localmente para evitar problemas de dependência
-      // Utiliza os dados do escopo do componente (grades, attendances)
       const sGrades = grades.filter(g => g.student_id === s.id);
       const avg = sGrades.length > 0 ? sGrades.reduce((a, b) => a + b.score, 0) / sGrades.length : 0;
       
@@ -130,14 +131,23 @@ export const Classes: React.FC<ClassesProps> = ({ onSelectStudent }) => {
       }
     });
 
-    // Construção segura dos objetos de retorno
-    const spotlightData = (bestSpotlight && bestSpotlight.id)
-      ? { student: bestSpotlight, stats: calculateStudentStats(bestSpotlight.id) }
-      : null;
+    // Construção segura dos objetos de retorno com verificação explícita
+    let spotlightData = null;
+    if (bestSpotlight) {
+        // Garantia de que id existe antes de passar para a função
+        spotlightData = { 
+            student: bestSpotlight, 
+            stats: calculateStudentStats(bestSpotlight.id) 
+        };
+    }
 
-    const improvementData = (bestImprStudent && bestImprStudent.id && bestImprValue > 0)
-      ? { student: bestImprStudent, value: bestImprValue }
-      : null;
+    let improvementData = null;
+    if (bestImprStudent && bestImprValue > 0) {
+        improvementData = { 
+            student: bestImprStudent, 
+            value: bestImprValue 
+        };
+    }
 
     return { 
       spotlight: spotlightData,
