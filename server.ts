@@ -127,6 +127,7 @@ app.post('/api/auth/sync', async (req, res) => {
 
 // --- SERVIR FRONTEND (VITE BUILD) ---
 // Serve arquivos estáticos da pasta 'dist' (gerada pelo vite build)
+// O cast para 'any' evita conflitos de tipagem estrita no setup híbrido
 app.use(express.static(path.join(__dirname, '../dist')) as any);
 
 // Fallback para SPA (React Router)
