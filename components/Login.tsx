@@ -157,22 +157,29 @@ export const Login: React.FC = () => {
 
   const syncWithBackend = async (userData: any) => {
     try {
+      // Tenta conexão com backend real
       const res = await fetch('/api/auth/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData)
       });
+      
+      if (!res.ok) throw new Error('API Error or Offline');
+      
       const persistentUser = await res.json();
       store.login(persistentUser);
     } catch (err) {
-      console.error("Sync Error:", err);
-      // Fallback local se a API falhar
+      console.warn("Backend indisponível, usando login local (Demo/Fallback).");
+      
+      // Fallback robusto para modo Client-Side/Demo
+      const isMaster = userData.email.toLowerCase().trim() === 'erikson.moreira@gmail.com';
+      
       store.login({
         ...userData,
         id: 'user-' + Date.now(),
-        role: userData.email === 'erikson.moreira@gmail.com' ? 'admin' : 'TEACHER',
-        plan: userData.email === 'erikson.moreira@gmail.com' ? 'gestor' : 'SEMENTE',
-        status: 'active',
+        role: isMaster ? 'SUPER_ADM' : 'TEACHER',
+        plan: isMaster ? 'GESTOR' : 'SEMENTE',
+        status: 'ativo',
         created_at: new Date().toISOString()
       });
     }
@@ -187,6 +194,9 @@ export const Login: React.FC = () => {
     
     setIsLoading(true);
     setError(null);
+
+    // Pequeno delay para feedback visual
+    await new Promise(r => setTimeout(r, 500));
 
     try {
       await syncWithBackend({
